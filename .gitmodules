@@ -1,0 +1,3 @@
+[submodule "epics-ca"]
+	path = epics-ca
+	url = https://github.com/agerasev/epics-ca.git
