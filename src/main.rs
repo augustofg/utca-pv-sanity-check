@@ -27,12 +27,16 @@ impl EpicsContextBundle {
 async fn main() {
     let ctx = EpicsContextBundle::new().unwrap();
 
-    let fofb_dcc_frame_err_pv_array: [_; 4*20] = core::array::from_fn(|i| {
-        ctx.connect::<i32>(format!("IA-{:02}RaBPM:BS-FOFBCtrl:DCCFMCFrameErrCntCH{}-Mon", i / 4 + 1, i % 4))
+    let fofb_dcc_frame_err_pv_array: [_; 4*60] = core::array::from_fn(|i| {
+        if i < 20*4 {
+            ctx.connect::<i32>(format!("IA-{:02}RaBPM:BS-FOFBCtrl:DCCFMCFrameErrCntCH{}-Mon", i / 4 + 1, i % 4))
+        } else {
+            ctx.connect::<i32>(format!("IA-{:02}RaBPM:BS-FOFBCtrl:DCCP2PFrameErrCntCH{}-Mon", (i - 20*4) / 8 + 1, i % 8))
+        }
     });
 
     let fofb_dcc_frame_err_ch_array = join_all(fofb_dcc_frame_err_pv_array).await;
-    println!("All DCCFMCFrameErrCntCH PVs joined!");
+    println!("All DCCFMCFrameErrCntCH and DCCP2PFrameErrCntCH PVs joined!");
 
     let mut err_cnt = 0;
     for ch in fofb_dcc_frame_err_ch_array {
