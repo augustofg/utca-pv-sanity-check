@@ -1,7 +1,7 @@
 use epics_ca::Context;
 use epics_ca::ValueChannel;
 use epics_ca::Error;
-use epics_ca::types::Value;
+use epics_ca::types::{Value, EpicsEnum};
 use futures::future::join_all;
 use std::format;
 use std::ffi::CString;
@@ -50,5 +50,49 @@ async fn main() {
 
     if err_cnt == 0 {
         println!("All DCCFMCFrameErrCnt are ok!");
+    }
+
+    let afc_timing_ch_arr: [u8; 4] = [0, 1, 2, 5];
+
+    let afc_timing_fofb_trig_width_pv_array: [_; 4*20] = core::array::from_fn(|i| {
+        ctx.connect::<f64>(format!("IA-{:02}RaBPM:TI-AMCFPGAEVR:AMC{}Width-RB", i / 4 + 1, afc_timing_ch_arr[i % 4]))
+    });
+
+    let afc_timing_fofb_trig_width_pv_array = join_all(afc_timing_fofb_trig_width_pv_array).await;
+    println!("All TI-AMCFPGAEVR:AMCxWidth-RB PVs joined!");
+
+    err_cnt = 0;
+    for ch in afc_timing_fofb_trig_width_pv_array {
+        let mut ch_con = ch.unwrap();
+        let value = ch_con.get().await.unwrap();
+        if value < 0.047 {
+            err_cnt = err_cnt + 1;
+            println!("{}: {}", ch_con.name().to_str().unwrap(), value);
+        }
+    }
+
+    if err_cnt == 0 {
+        println!("All TI-AMCFPGAEVR:AMCxWidth-RB are ok!");
+    }
+
+    let afc_timing_fofb_trig_en_pv_array: [_; 4*20] = core::array::from_fn(|i| {
+        ctx.connect::<EpicsEnum>(format!("IA-{:02}RaBPM:TI-AMCFPGAEVR:AMC{}State-Sts", i / 4 + 1, afc_timing_ch_arr[i % 4]))
+    });
+
+    let afc_timing_fofb_trig_en_pv_array = join_all(afc_timing_fofb_trig_en_pv_array).await;
+    println!("All TI-AMCFPGAEVR:AMCxState-Sts PVs joined!");
+
+    err_cnt = 0;
+    for ch in afc_timing_fofb_trig_en_pv_array {
+        let mut ch_con = ch.unwrap();
+        let value = ch_con.get().await.unwrap();
+        if value.0 != 1 {
+            err_cnt = err_cnt + 1;
+            println!("{}: {}", ch_con.name().to_str().unwrap(), value.0);
+        }
+    }
+
+    if err_cnt == 0 {
+        println!("All TI-AMCFPGAEVR:AMCxState-Sts are ok!");
     }
 }
