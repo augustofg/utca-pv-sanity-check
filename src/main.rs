@@ -75,6 +75,29 @@ async fn main() {
         println!("All TI-AMCFPGAEVR:AMCxWidth-RB are ok!");
     }
 
+    let afc_timing_fmc_ch_arr: [&str; 4] = ["FMC1Ch0", "FMC1Ch4", "FMC2Ch0", "FMC2Ch3"];
+
+    let afc_timing_fmc_trig_width_pv_array: [_; 4*20] = core::array::from_fn(|i| {
+        ctx.connect::<f64>(format!("IA-{:02}RaBPM:TI-AMCFPGAEVR:{}Width-RB", i / 4 + 1, afc_timing_fmc_ch_arr[i % 4]))
+    });
+
+    let afc_timing_fmc_trig_width_pv_array = join_all(afc_timing_fmc_trig_width_pv_array).await;
+    println!("All TI-AMCFPGAEVR:FMCxChxWidth-RB PVs joined!");
+
+    err_cnt = 0;
+    for ch in afc_timing_fmc_trig_width_pv_array {
+        let mut ch_con = ch.unwrap();
+        let value = ch_con.get().await.unwrap();
+        if value < 74.0 {
+            err_cnt = err_cnt + 1;
+            println!("{}: {}", ch_con.name().to_str().unwrap(), value);
+        }
+    }
+
+    if err_cnt == 0 {
+        println!("All TI-AMCFPGAEVR:FMCxChxWidth-RB are ok!");
+    }
+
     let afc_timing_fofb_trig_en_pv_array: [_; 4*20] = core::array::from_fn(|i| {
         ctx.connect::<EpicsEnum>(format!("IA-{:02}RaBPM:TI-AMCFPGAEVR:AMC{}State-Sts", i / 4 + 1, afc_timing_ch_arr[i % 4]))
     });
